@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BRYVICY4ME</title>
+<meta name="description" content="BRYVICY4ME – private browsing start page with privacy search, weather, sports and AI hand-off.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BRYVICY4ME">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="application-name" content="BRYVICY4ME">
+<meta name="theme-color" content="#07090F">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%2300D1FF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='180' height='180' rx='40' fill='%2307090F'/%3E%3Cpath d='M90 26l50 18v40c0 34-22 58-50 70-28-12-50-36-50-70V44z' fill='url(%23g)'/%3E%3Ctext x='90' y='112' font-family='Arial,Helvetica,sans-serif' font-size='64' font-weight='900' text-anchor='middle' fill='%2307090F'%3EB%3C/text%3E%3C/svg%3E">
+<link id="touchicon" rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%2300D1FF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='180' height='180' fill='%2307090F'/%3E%3Cpath d='M90 26l50 18v40c0 34-22 58-50 70-28-12-50-36-50-70V44z' fill='url(%23g)'/%3E%3Ctext x='90' y='112' font-family='Arial,Helvetica,sans-serif' font-size='64' font-weight='900' text-anchor='middle' fill='%2307090F'%3EB%3C/text%3E%3C/svg%3E">
+<style>
+/* ── Design system (BRYVICY4ME dark) ─────────────────────────── */
+:root{
+  --bg:#07090F; --bg2:#0C1018; --surface:#121722; --surface2:#1A2130; --stroke:#263044;
+  --text:#EEF2FF; --muted:#8C97B2; --dim:#5D6782;
+  --accent:#7C5CFF; --accent2:#00D1FF; --good:#2EE59D; --warn:#FFB547; --bad:#FF5C7A;
+  --grad:linear-gradient(135deg,var(--accent),var(--accent2));
+  --r-lg:22px; --r-md:16px; --r-sm:12px;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);}
+body{min-height:100vh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background:radial-gradient(900px 500px at 85% -10%,rgba(124,92,255,.22),transparent 60%),radial-gradient(700px 400px at -10% 10%,rgba(0,209,255,.12),transparent 60%),var(--bg);background-attachment:fixed}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent2)}
+.wrap{max-width:980px;margin:0 auto;padding:14px 16px 28px}
+/* header */
+header{display:flex;align-items:center;gap:10px;padding:6px 0 14px;min-width:0}
+header>div:nth-child(2){min-width:0}
+@media(max-width:360px){.brand{font-size:19px}.tag{display:none}}
+.logo{width:42px;height:42px;flex:none}
+.brand{font-weight:900;letter-spacing:.06em;font-size:22px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:12px;color:var(--muted);margin-top:1px}
+.hgrow{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--stroke);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.pill.warn .dot{background:var(--warn);box-shadow:0 0 10px var(--warn)}
+.pill .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 10px var(--good)}
+.iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--stroke);background:var(--surface);display:grid;place-items:center;font-size:18px}
+/* cards */
+.card{background:linear-gradient(180deg,rgba(255,255,255,.02),transparent),var(--surface);border:1px solid var(--stroke);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 10px;font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.card h2 .sp{flex:1}
+.grid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+.card{min-width:0}
+@media(min-width:760px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.span2{grid-column:span 2}}
+/* search */
+.search{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--stroke);border-radius:18px;padding:6px 6px 6px 14px}
+.search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,.25)}
+.search input{flex:1;min-width:0;background:transparent;border:0;outline:0;font-size:17px;padding:10px 0}
+.btn{border:0;border-radius:14px;padding:11px 16px;font-weight:700;background:var(--grad);color:#07090F}
+.btn.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--stroke);font-weight:600}
+.btn.sm{padding:8px 12px;font-size:13.5px;border-radius:11px}
+.btn.danger{background:rgba(255,92,122,.15);color:var(--bad);border:1px solid rgba(255,92,122,.4)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--stroke);background:var(--surface2);border-radius:999px;padding:8px 13px;font-size:13.5px;color:var(--muted)}
+.chip.on{background:rgba(124,92,255,.18);border-color:var(--accent);color:var(--text)}
+.note{font-size:12.5px;color:var(--muted);line-height:1.45}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--stroke)}
+.toggle:first-of-type{border-top:0}
+.toggle b{font-weight:600;font-size:14.5px}
+.toggle small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.sw{position:relative;width:50px;height:30px;flex:none}
+.sw input{opacity:0;width:100%;height:100%;margin:0;position:absolute;inset:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:999px;background:var(--surface2);border:1px solid var(--stroke);transition:.2s}
+.sw span:after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+span{background:var(--accent);border-color:var(--accent)}
+.sw input:checked+span:after{transform:translateX(20px)}
+/* favorites */
+.favs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(min-width:760px){.favs{grid-template-columns:repeat(8,1fr)}}
+.fav{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;padding:4px 0;font-size:12px;color:var(--muted);min-width:0}
+.fav .ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-weight:800;font-size:20px;color:#fff;border:1px solid rgba(255,255,255,.08)}
+.fav .nm{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fav .x{position:absolute;top:-2px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--bad);color:#fff;font-size:12px;line-height:20px;display:none;border:0;padding:0}
+.editing .fav .x{display:block}
+/* weather */
+.wx-now{display:flex;align-items:center;gap:14px}
+.wx-ic{font-size:46px;line-height:1}
+.wx-t{font-size:42px;font-weight:800;letter-spacing:-.02em}
+.wx-d{color:var(--muted);font-size:13.5px}
+.wx-days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}
+.wx-day{background:var(--bg2);border:1px solid var(--stroke);border-radius:12px;padding:8px 4px;text-align:center;font-size:12px;color:var(--muted)}
+.wx-day b{display:block;color:var(--text);font-size:13px}
+.wx-day .e{font-size:20px;margin:3px 0}
+.field{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--stroke);border-radius:12px;padding:9px 12px;outline:0}
+.field:focus{border-color:var(--accent)}
+.msg{padding:12px;border-radius:12px;background:var(--bg2);border:1px dashed var(--stroke);color:var(--muted);font-size:13px;line-height:1.45}
+.msg.err{border-color:rgba(255,181,71,.5);color:var(--warn)}
+/* sports */
+.games{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto;margin-top:8px}
+.game{display:grid;grid-template-columns:1fr auto;gap:4px 10px;background:var(--bg2);border:1px solid var(--stroke);border-radius:12px;padding:9px 12px;font-size:14px;text-decoration:none;color:var(--text)}
+.game .tm{display:flex;align-items:center;gap:8px;min-width:0}
+.game .tm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.game .sc{font-weight:800;text-align:right}
+.game .st{grid-column:span 2;font-size:12px;color:var(--muted)}
+.game .st.live{color:var(--bad);font-weight:700}
+.game img{width:20px;height:20px;object-fit:contain}
+.game.pgh{border-color:rgba(255,181,71,.55)}
+/* AI */
+textarea.field{width:100%;min-height:84px;resize:vertical;line-height:1.4}
+.ai-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+@media(min-width:760px){.ai-grid{grid-template-columns:repeat(4,1fr)}}
+.ai{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;border:1px solid var(--stroke);background:var(--surface2);border-radius:14px;padding:10px 12px}
+.ai b{font-size:14px}.ai small{font-size:11.5px;color:var(--muted)}
+/* shield / checker */
+.stat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat div{background:var(--bg2);border:1px solid var(--stroke);border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font-size:20px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat small{font-size:11px;color:var(--muted)}
+details{border-top:1px solid var(--stroke);padding-top:10px;margin-top:10px}
+summary{cursor:pointer;color:var(--muted);font-size:13.5px}
+.hosts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hosts code{font-size:11.5px;background:var(--bg2);border:1px solid var(--stroke);border-radius:8px;padding:3px 7px;color:var(--muted)}
+ol.tips{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--muted);line-height:1.6}
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,30px);opacity:0;background:var(--surface2);border:1px solid var(--stroke);border-radius:14px;padding:11px 16px;font-size:14px;box-shadow:var(--shadow);transition:.25s;pointer-events:none;z-index:50;max-width:90vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+/* sheet */
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:40}
+#sheet.on{display:flex}
+#sheet .card{width:100%;max-width:520px;border-radius:24px 24px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:760px){#sheet{align-items:center}#sheet .card{border-radius:24px}}
+footer{text-align:center;color:var(--dim);font-size:12px;padding:22px 0 6px;line-height:1.6}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="logo" viewBox="0 0 180 180" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C5CFF"/><stop offset="1" stop-color="#00D1FF"/></linearGradient></defs><rect width="180" height="180" rx="40" fill="#121722" stroke="#263044" stroke-width="4"/><path d="M90 26l50 18v40c0 34-22 58-50 70-28-12-50-36-50-70V44z" fill="url(#lg)"/><text x="90" y="112" font-family="Arial,Helvetica,sans-serif" font-size="64" font-weight="900" text-anchor="middle" fill="#07090F">B</text></svg>
+    <div><div class="brand">BRYVICY4ME</div><div class="tag">Private browser · start page</div></div>
+    <div class="hgrow"></div>
+    <span class="pill" id="privPill"><span class="dot"></span><span id="privTxt">Private</span></span>
+    <button class="iconbtn" id="btnSettings" aria-label="Settings">⚙︎</button>
+  </header>
+
+  <!-- SEARCH -->
+  <section class="card" id="searchCard" style="margin-bottom:14px">
+    <form class="search" id="searchForm" autocomplete="off">
+      <span aria-hidden="true" style="color:var(--muted)">🔍</span>
+      <input id="q" type="search" enterkeyhint="go" placeholder="Search privately or type a website" aria-label="Search or website" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button class="btn" type="submit" id="btnGo">Go</button>
+    </form>
+    <div class="chips" id="engines" role="radiogroup" aria-label="Search engine"></div>
+    <div class="note" id="engineNote"></div>
+  </section>
+
+  <div class="grid">
+    <!-- FAVORITES -->
+    <section class="card span2" id="favCard">
+      <h2>★ Favorites <span class="sp"></span><button class="btn ghost sm" id="btnAddFav">+ Add</button><button class="btn ghost sm" id="btnEditFav">Edit</button></h2>
+      <div class="favs" id="favs"></div>
+    </section>
+
+    <!-- WEATHER -->
+    <section class="card" id="wxCard">
+      <h2>☀︎ Weather <span class="sp"></span><button class="btn ghost sm" id="btnUnits">°F</button><button class="btn ghost sm" id="btnLocate" aria-label="Use my location">📍</button></h2>
+      <div id="wxBody"><div class="msg">Loading weather…</div></div>
+      <form class="row" id="wxForm" style="margin-top:10px">
+        <input class="field" id="wxCity" placeholder="City or ZIP (e.g. Beaver Falls)" aria-label="City">
+        <button class="btn ghost sm" type="submit" id="btnCity">Set</button>
+      </form>
+    </section>
+
+    <!-- SPORTS -->
+    <section class="card" id="spCard">
+      <h2>🏆 Sports <span class="sp"></span><button class="btn ghost sm" id="btnSpRefresh" aria-label="Refresh scores">↻</button></h2>
+      <div class="chips" id="leagues" style="padding-top:0"></div>
+      <div class="games" id="games"><div class="msg">Loading scores…</div></div>
+    </section>
+
+    <!-- AI ASSISTANT -->
+    <section class="card span2" id="aiCard">
+      <h2>✦ AI Assistant</h2>
+      <textarea class="field" id="aiQ" placeholder="Ask anything… (it opens in the AI you pick — nothing is stored here)" aria-label="Ask the AI"></textarea>
+      <div class="ai-grid" id="aiGrid"></div>
+      <div class="note" style="margin-top:8px">Your question is copied to the clipboard too, in case a service doesn’t pre-fill it. No API keys live in this app.</div>
+    </section>
+
+    <!-- PRIVACY SHIELD -->
+    <section class="card span2" id="shieldCard">
+      <h2>🛡 Privacy Shield</h2>
+      <div class="stat">
+        <div><b id="stHosts">0</b><small>ad hosts on blocklist</small></div>
+        <div><b id="stBlocked">0</b><small>ad links stopped</small></div>
+        <div><b id="stCleared">0</b><small>times data wiped</small></div>
+      </div>
+      <form class="row" id="chkForm">
+        <input class="field" id="chkUrl" placeholder="Paste a link to check it" aria-label="Link to check">
+        <button class="btn ghost sm" type="submit" id="btnCheck">Check</button>
+      </form>
+      <div id="chkOut" class="note" style="margin-top:8px"></div>
+      <details>
+        <summary>Turn on ad &amp; pop-up blocking in Safari (one-time setup)</summary>
+        <ol class="tips">
+          <li>Settings → Apps → Safari → turn on <b>Block Pop-ups</b>.</li>
+          <li>Same screen → <b>Prevent Cross-Site Tracking</b> and <b>Hide IP Address</b> (From Trackers).</li>
+          <li>Install a free content blocker from the App Store (e.g. AdGuard or 1Blocker), then Settings → Apps → Safari → Extensions → turn it on.</li>
+          <li>For zero history, use a <b>Private</b> tab: tap the tabs button → Private.</li>
+        </ol>
+      </details>
+      <details>
+        <summary>Blocked ad &amp; tracker hosts</summary>
+        <div class="hosts" id="hosts"></div>
+      </details>
+    </section>
+  </div>
+
+  <footer>
+    BRYVICY4ME web 1.0.0 · Works best added to your Home Screen<br>
+    © 2026 Sean James Bryson. All rights reserved.
+  </footer>
+</div>
+
+<!-- SETTINGS / ADD-FAV SHEET -->
+<div id="sheet" role="dialog" aria-modal="true">
+  <div class="card" id="sheetCard"></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+/* ── Storage (private by default: nothing personal unless opted-in) ── */
+var KEY='bryvicy4me.v1';
+var defaults={engine:'ddg',newTab:true,keepRecent:false,recent:[],units:'F',city:null,league:'nfl',
+  favs:[{n:'DuckDuckGo',u:'https://duckduckgo.com'},{n:'YouTube',u:'https://www.youtube.com'},{n:'ESPN',u:'https://www.espn.com'},{n:'X',u:'https://x.com'},
+        {n:'Weather',u:'https://www.weather.gov'},{n:'Wikipedia',u:'https://en.wikipedia.org'},{n:'Gmail',u:'https://mail.google.com'},{n:'Maps',u:'https://maps.apple.com'}],
+  blocked:0,cleared:0};
+var S;
+function load(){try{S=Object.assign({},defaults,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){S=Object.assign({},defaults);}
+  if(!Array.isArray(S.favs))S.favs=defaults.favs.slice(); if(!Array.isArray(S.recent))S.recent=[];}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+load();
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var tT;function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(function(){t.classList.remove('on')},2600)}
+
+/* ── AdBlocker host list (from AdBlocker.swift adHostBlocklist) ── */
+var AD_HOSTS=["doubleclick.net","googlesyndication.com","googleadservices.com","googletagmanager.com","google-analytics.com","adservice.google.com",
+ "facebook.net","connect.facebook.net","ads.twitter.com","ads.linkedin.com","ads.yahoo.com","adnxs.com","rubiconproject.com",
+ "pubmatic.com","openx.net","criteo.com","taboola.com","outbrain.com","scorecardresearch.com","quantserve.com",
+ "amazon-adsystem.com","media.net","adroll.com","moatads.com","adcolony.com","applovin.com","unityads.unity3d.com",
+ "vungle.com","chartboost.com","ironsrc.com","inmobi.com","popads.net","popcash.net","propellerads.com","adcash.com",
+ "exoclick.com","juicyads.com","trafficjunky.com"];
+// Proper host match (exact or subdomain) – avoids the Swift `contains` false positives (e.g. "notmedia.network")
+function adHost(host){host=(host||'').toLowerCase().replace(/\.$/,'');
+  for(var i=0;i<AD_HOSTS.length;i++){var h=AD_HOSTS[i];if(host===h||host.slice(-(h.length+1))==='.'+h)return h;}return null;}
+
+/* ── Search engines (privacy-first) ── */
+var ENGINES={
+  ddg:{n:'DuckDuckGo',u:'https://duckduckgo.com/?q=%s&kp=1',note:'No tracking, no search history. Default.'},
+  brave:{n:'Brave',u:'https://search.brave.com/search?q=%s',note:'Independent index, no profiling.'},
+  startpage:{n:'Startpage',u:'https://www.startpage.com/do/search?q=%s',note:'Google results without Google tracking you.'},
+  mojeek:{n:'Mojeek',u:'https://www.mojeek.com/search?q=%s',note:'Own crawler, no tracking.'},
+  google:{n:'Google',u:'https://www.google.com/search?q=%s',note:'Not private — Google logs searches.'},
+  bing:{n:'Bing',u:'https://www.bing.com/search?q=%s',note:'Not private — Microsoft logs searches.'}
+};
+if(!ENGINES[S.engine])S.engine='ddg';
+
+/* ── URL handling (mirrors ATS: HTTPS only) ── */
+function toURL(input){
+  var s=(input||'').trim(); if(!s)return null;
+  if(/\s/.test(s))return null;
+  var m=/^(https?):\/\//i.exec(s);
+  var cand=m?s:'https://'+s;
+  try{var u=new URL(cand);}catch(e){return null;}
+  if(!/^https?:$/.test(u.protocol))return null;
+  if(!m){ if(!/\.[a-z]{2,}$/i.test(u.hostname) && u.hostname!=='localhost')return null; }
+  if(u.protocol==='http:'){u.protocol='https:';}
+  return u;
+}
+function navigate(url,forceNew){
+  var nt=forceNew===undefined?S.newTab:forceNew;
+  if(window.__bryNav){window.__bryNav.push({url:url,newTab:nt});return;}
+  if(nt){var w=window.open(url,'_blank','noopener,noreferrer'); if(!w)location.assign(url);}
+  else location.assign(url);
+}
+function openSafe(raw,forceNew){
+  var u=toURL(raw);
+  if(!u){toast('That doesn’t look like a web address');return false;}
+  var h=adHost(u.hostname);
+  if(h){S.blocked++;save();renderStats();toast('🛡 Blocked: '+u.hostname+' is an ad/tracker host');return false;}
+  navigate(u.href,forceNew);return true;
+}
+function doSearch(q){
+  q=(q||'').trim(); if(!q){toast('Type something to search');$('q').focus();return;}
+  if(S.keepRecent){S.recent=[q].concat(S.recent.filter(function(x){return x!==q})).slice(0,8);save();}
+  var u=toURL(q);
+  if(u){openSafe(u.href);return;}
+  navigate(ENGINES[S.engine].u.replace('%s',encodeURIComponent(q)));
+}
+function renderEngines(){
+  var h='';for(var k in ENGINES){h+='<button type="button" role="radio" class="chip'+(k===S.engine?' on':'')+'" aria-checked="'+(k===S.engine)+'" data-eng="'+k+'">'+esc(ENGINES[k].n)+'</button>';}
+  $('engines').innerHTML=h; $('engineNote').textContent=ENGINES[S.engine].note+(S.newTab?' Opens in a new tab.':' Opens in this tab.');
+}
+$('engines').addEventListener('click',function(e){var b=e.target.closest('[data-eng]');if(!b)return;S.engine=b.getAttribute('data-eng');save();renderEngines();});
+$('searchForm').addEventListener('submit',function(e){e.preventDefault();doSearch($('q').value);});
+
+/* ── Favorites ── */
+var COLORS=['#7C5CFF','#00A3FF','#FF5C7A','#2EE59D','#FFB547','#B45CFF','#00D1B2','#FF7A45'];
+function favColor(n){var x=0;for(var i=0;i<n.length;i++)x=(x*31+n.charCodeAt(i))>>>0;return COLORS[x%COLORS.length]}
+function renderFavs(){
+  var h='';S.favs.forEach(function(f,i){var c=favColor(f.n);
+    h+='<button type="button" class="fav" data-i="'+i+'" title="'+esc(f.u)+'"><span class="ic" style="background:linear-gradient(135deg,'+c+',rgba(0,0,0,.35))">'+esc((f.n[0]||'?').toUpperCase())+'</span><span class="nm">'+esc(f.n)+'</span><span class="x" data-del="'+i+'" role="button" aria-label="Remove '+esc(f.n)+'">✕</span></button>';});
+  if(!S.favs.length)h='<div class="msg" style="grid-column:1/-1">No favorites yet — tap + Add.</div>';
+  $('favs').innerHTML=h;
+}
+var editing=false;
+$('favs').addEventListener('click',function(e){
+  var d=e.target.closest('[data-del]');
+  if(d){e.stopPropagation();var i=+d.getAttribute('data-del');var n=S.favs[i].n;S.favs.splice(i,1);save();renderFavs();toast('Removed '+n);return;}
+  var b=e.target.closest('.fav');if(!b)return;
+  if(editing){toast('Tap ✕ to remove, or Done');return;}
+  openSafe(S.favs[+b.getAttribute('data-i')].u);
+});
+$('btnEditFav').addEventListener('click',function(){editing=!editing;$('favCard').classList.toggle('editing',editing);this.textContent=editing?'Done':'Edit';});
+$('btnAddFav').addEventListener('click',function(){
+  openSheet('<h2>Add favorite</h2><form id="favForm"><div class="row" style="flex-direction:column;align-items:stretch;gap:10px">'+
+   '<input class="field" id="favName" placeholder="Name (e.g. Pirates)" maxlength="24" required>'+
+   '<input class="field" id="favUrl" placeholder="Website (e.g. mlb.com/pirates)" inputmode="url" autocapitalize="off" required>'+
+   '<div class="row"><button class="btn" type="submit" id="favSave">Save</button><button class="btn ghost" type="button" data-close>Cancel</button></div></div></form>');
+  $('favForm').addEventListener('submit',function(e){e.preventDefault();
+    var n=$('favName').value.trim(),u=toURL($('favUrl').value);
+    if(!n){toast('Give it a name');return;} if(!u){toast('That website address isn’t valid');return;}
+    if(adHost(u.hostname)){toast('🛡 That’s an ad/tracker host');return;}
+    S.favs.push({n:n,u:u.href});save();renderFavs();closeSheet();toast('Added '+n);});
+  $('favName').focus();
+});
+
+/* ── Sheet ── */
+function openSheet(html){$('sheetCard').innerHTML=html;$('sheet').classList.add('on');}
+function closeSheet(){$('sheet').classList.remove('on');$('sheetCard').innerHTML='';}
+$('sheet').addEventListener('click',function(e){if(e.target===this||e.target.closest('[data-close]'))closeSheet();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSheet();});
+
+/* ── Settings / PrivacyManager ── */
+function swRow(id,title,sub,on){return '<label class="toggle"><span><b>'+title+'</b><small>'+sub+'</small></span><span class="sw"><input type="checkbox" id="'+id+'"'+(on?' checked':'')+'><span></span></span></label>';}
+$('btnSettings').addEventListener('click',function(){
+  var rec=S.keepRecent&&S.recent.length?'<div class="chips" id="recentChips">'+S.recent.map(function(r){return '<button type="button" class="chip" data-r="'+esc(r)+'">'+esc(r)+'</button>'}).join('')+'</div>':'';
+  openSheet('<h2>Settings &amp; privacy <span class="sp"></span><button class="btn ghost sm" data-close>Close</button></h2>'+
+    swRow('setNewTab','Open results in a new tab','Keeps BRYVICY4ME open behind your results',S.newTab)+
+    swRow('setRecent','Remember recent searches','Off = nothing you search is saved (private)',S.keepRecent)+rec+
+    '<div class="toggle"><span><b>Wipe everything</b><small>Favorites, city, searches and stats on this device</small></span><button class="btn danger sm" id="btnWipe">Wipe</button></div>'+
+    '<p class="note">BRYVICY4ME has no account, no ads, no analytics and no cookies. Settings stay only on this device. Weather comes from Open-Meteo and scores from ESPN’s public feed; those requests go straight from your phone to them.</p>');
+  $('setNewTab').addEventListener('change',function(){S.newTab=this.checked;save();renderEngines();toast(S.newTab?'Results open in a new tab':'Results open in this tab');});
+  $('setRecent').addEventListener('change',function(){S.keepRecent=this.checked;if(!S.keepRecent)S.recent=[];save();renderPriv();toast(S.keepRecent?'Recent searches on':'Recent searches off & cleared');});
+  var rc=$('recentChips');if(rc)rc.addEventListener('click',function(e){var b=e.target.closest('[data-r]');if(b){closeSheet();$('q').value=b.getAttribute('data-r');doSearch($('q').value);}});
+  $('btnWipe').addEventListener('click',function(){
+    var c=(S.cleared||0)+1;try{localStorage.removeItem(KEY);}catch(e){}load();S.cleared=c;save();
+    renderAll();closeSheet();loadWeather();toast('🧹 Wiped — fresh start');});
+});
+function renderPriv(){$('privTxt').textContent=S.keepRecent?'Recents on':'Private';$('privPill').classList.toggle('warn',!!S.keepRecent);$('privPill').title=S.keepRecent?'Recent searches are saved on this device':'Nothing you search is saved';}
+
+/* ── Privacy shield ── */
+function renderStats(){$('stHosts').textContent=AD_HOSTS.length;$('stBlocked').textContent=S.blocked||0;$('stCleared').textContent=S.cleared||0;}
+$('hosts').innerHTML=AD_HOSTS.map(function(h){return '<code>'+esc(h)+'</code>'}).join('');
+$('chkForm').addEventListener('submit',function(e){e.preventDefault();
+  var v=$('chkUrl').value,u=toURL(v),o=$('chkOut');
+  if(!u){o.innerHTML='<span style="color:var(--warn)">Enter a link like example.com</span>';return;}
+  var h=adHost(u.hostname);
+  if(h){S.blocked++;save();renderStats();o.innerHTML='<span style="color:var(--bad)">⛔ '+esc(u.hostname)+' is on the ad/tracker blocklist ('+esc(h)+'). Don’t open it.</span>';}
+  else o.innerHTML='<span style="color:var(--good)">✓ '+esc(u.hostname)+' isn’t a known ad host.</span> <button class="btn ghost sm" type="button" id="chkOpen">Open</button>';
+  var b=$('chkOpen');if(b)b.addEventListener('click',function(){openSafe(u.href);});
+});
+
+/* ── Weather (Open-Meteo, no key) ── */
+var WMO={0:['☀️','Clear'],1:['🌤','Mostly clear'],2:['⛅️','Partly cloudy'],3:['☁️','Cloudy'],45:['🌫','Fog'],48:['🌫','Icy fog'],
+ 51:['🌦','Light drizzle'],53:['🌦','Drizzle'],55:['🌧','Heavy drizzle'],56:['🌧','Freezing drizzle'],57:['🌧','Freezing drizzle'],
+ 61:['🌦','Light rain'],63:['🌧','Rain'],65:['🌧','Heavy rain'],66:['🌧','Freezing rain'],67:['🌧','Freezing rain'],
+ 71:['🌨','Light snow'],73:['🌨','Snow'],75:['❄️','Heavy snow'],77:['🌨','Snow grains'],80:['🌦','Showers'],81:['🌧','Showers'],82:['⛈','Heavy showers'],
+ 85:['🌨','Snow showers'],86:['❄️','Snow showers'],95:['⛈','Thunderstorm'],96:['⛈','Storm + hail'],99:['⛈','Storm + hail']};
+function wmo(c){return WMO[c]||['🌡','—']}
+var DEFAULT_CITY={name:'Beaver Falls, PA',lat:40.7520,lon:-80.3192};
+function fetchJSON(url,ms){
+  var ctl=('AbortController' in window)?new AbortController():null;
+  var t=setTimeout(function(){if(ctl)ctl.abort();},ms||9000);
+  return fetch(url,ctl?{signal:ctl.signal,referrerPolicy:'no-referrer',credentials:'omit'}:{}).then(function(r){clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();},function(e){clearTimeout(t);throw e;});
+}
+function wxError(m){$('wxBody').innerHTML='<div class="msg err">'+esc(m)+' <a href="https://www.weather.gov" target="_blank" rel="noopener noreferrer">Open weather.gov</a></div>';}
+var wxSeq=0;
+function loadWeather(){
+  var c=S.city||DEFAULT_CITY,seq=++wxSeq;$('btnUnits').textContent='°'+S.units;
+  if(!navigator.onLine){wxError('You’re offline — weather will load when you reconnect.');return;}
+  $('wxBody').innerHTML='<div class="msg">Loading weather for '+esc(c.name)+'…</div>';
+  var u='https://api.open-meteo.com/v1/forecast?latitude='+c.lat+'&longitude='+c.lon+
+   '&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day'+
+   '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=5&timezone=auto'+
+   (S.units==='F'?'&temperature_unit=fahrenheit&wind_speed_unit=mph':'&wind_speed_unit=kmh');
+  fetchJSON(u).then(function(d){ if(seq!==wxSeq)return;
+    var cur=d.current,w=wmo(cur.weather_code),days='';
+    for(var i=0;i<d.daily.time.length&&i<5;i++){var dw=wmo(d.daily.weather_code[i]);var dt=new Date(d.daily.time[i]+'T12:00:00');
+      days+='<div class="wx-day"><b>'+(i===0?'Today':dt.toLocaleDateString(undefined,{weekday:'short'}))+'</b><div class="e">'+dw[0]+'</div>'+Math.round(d.daily.temperature_2m_max[i])+'° / '+Math.round(d.daily.temperature_2m_min[i])+'°'+(d.daily.precipitation_probability_max&&d.daily.precipitation_probability_max[i]!=null?'<br>💧'+d.daily.precipitation_probability_max[i]+'%':'')+'</div>';}
+    $('wxBody').innerHTML='<div class="wx-now"><div class="wx-ic">'+(cur.weather_code<=1&&!cur.is_day?'🌙':w[0])+'</div><div><div class="wx-t">'+Math.round(cur.temperature_2m)+'°'+S.units+'</div><div class="wx-d">'+esc(c.name)+' · '+w[1]+'<br>Feels '+Math.round(cur.apparent_temperature)+'° · 💧'+cur.relative_humidity_2m+'% · 💨'+Math.round(cur.wind_speed_10m)+(S.units==='F'?' mph':' km/h')+'</div></div></div><div class="wx-days">'+days+'</div>';
+  }).catch(function(){ if(seq===wxSeq)wxError('Weather is unavailable right now.');});
+}
+$('btnUnits').addEventListener('click',function(){S.units=S.units==='F'?'C':'F';save();loadWeather();});
+$('wxForm').addEventListener('submit',function(e){e.preventDefault();var q=$('wxCity').value.trim();if(!q){toast('Type a city');return;}
+  if(!navigator.onLine){toast('You’re offline');return;}
+  $('wxBody').innerHTML='<div class="msg">Finding '+esc(q)+'…</div>';
+  var zip=/^\d{5}$/.test(q);
+  fetchJSON('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(q)+(zip?'&countryCode=US':'')).then(function(d){
+    if(!d.results||!d.results.length){wxError('Couldn’t find “'+q+'”.');return;}
+    var r=d.results[0];S.city={name:r.name+(r.admin1?', '+r.admin1:''),lat:r.latitude,lon:r.longitude};save();$('wxCity').value='';loadWeather();
+  }).catch(function(){wxError('Couldn’t look up that city right now.');});
+});
+$('btnLocate').addEventListener('click',function(){
+  if(!navigator.geolocation){toast('Location isn’t available — type your city');return;}
+  toast('Asking for your location…');
+  navigator.geolocation.getCurrentPosition(function(p){
+    S.city={name:'My location',lat:+p.coords.latitude.toFixed(3),lon:+p.coords.longitude.toFixed(3)};save();loadWeather();
+  },function(){toast('Location was blocked — type your city instead');},{timeout:10000,maximumAge:600000});
+});
+
+/* ── Sports (ESPN public scoreboard, no key) ── */
+var LEAGUES={nfl:['NFL','football/nfl'],nba:['NBA','basketball/nba'],nhl:['NHL','hockey/nhl'],mlb:['MLB','baseball/mlb'],
+  cfb:['College FB','football/college-football'],cbb:['College BB','basketball/mens-college-basketball'],mls:['MLS','soccer/usa.1']};
+if(!LEAGUES[S.league])S.league='nfl';
+var PGH=/pittsburgh|steelers|penguins|pirates|panthers \(pit|pitt/i;
+function renderLeagues(){var h='';for(var k in LEAGUES)h+='<button type="button" class="chip'+(k===S.league?' on':'')+'" data-lg="'+k+'">'+LEAGUES[k][0]+'</button>';$('leagues').innerHTML=h;}
+$('leagues').addEventListener('click',function(e){var b=e.target.closest('[data-lg]');if(!b)return;S.league=b.getAttribute('data-lg');save();renderLeagues();loadSports();});
+function spError(m){var lg=LEAGUES[S.league];$('games').innerHTML='<div class="msg err">'+esc(m)+' <a href="https://www.espn.com/'+lg[1].split('/')[1]+'/scoreboard" target="_blank" rel="noopener noreferrer">Open '+lg[0]+' scores on ESPN</a></div>';}
+var spSeq=0;
+function loadSports(){
+  var lg=LEAGUES[S.league],seq=++spSeq;
+  if(!navigator.onLine){spError('You’re offline — scores will load when you reconnect.');return;}
+  $('games').innerHTML='<div class="msg">Loading '+lg[0]+' scores…</div>';
+  var spU='https://site.api.espn.com/apis/site/v2/sports/'+lg[1]+'/scoreboard';
+  fetchJSON(spU).catch(function(){return fetchJSON(spU+'?t='+Math.floor(Date.now()/60000));}).then(function(d){ if(seq!==spSeq)return;
+    var ev=(d.events||[]);
+    if(!ev.length){spError('No '+lg[0]+' games scheduled today.');return;}
+    var h='';ev.slice(0,30).forEach(function(e){
+      var c=(e.competitions||[])[0]||{},cs=(c.competitors||[]).slice().sort(function(a,b){return a.homeAway==='away'?-1:1});
+      var st=(e.status&&e.status.type)||{},state=st.state,pre=state==='pre';
+      var row=function(t){var tm=t.team||{};return '<div class="tm">'+(tm.logo?'<img src="'+esc(tm.logo)+'" alt="" loading="lazy" referrerpolicy="no-referrer">':'')+'<span>'+esc(tm.shortDisplayName||tm.displayName||'TBD')+(t.records&&t.records[0]&&pre?' <small style="color:var(--dim)">'+esc(t.records[0].summary)+'</small>':'')+'</span></div><div class="sc">'+(pre?'':esc(t.score||'0'))+'</div>';};
+      var link=(e.links&&e.links[0]&&e.links[0].href)||'https://www.espn.com';
+      var names=cs.map(function(t){return (t.team&&t.team.displayName)||''}).join(' ');
+      h+='<a class="game'+(PGH.test(names)?' pgh':'')+'" href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+cs.map(row).join('')+'<div class="st'+(state==='in'?' live':'')+'">'+(state==='in'?'● LIVE · ':'')+esc(st.shortDetail||st.detail||'')+'</div></a>';
+    });
+    $('games').innerHTML=h;
+  }).catch(function(){ if(seq===spSeq)spError('Scores are unavailable right now.');});
+}
+$('btnSpRefresh').addEventListener('click',loadSports);
+
+/* ── AI assistant (hand-off, no keys) ── */
+var AIS=[
+  {k:'duck',n:'Duck.ai',s:'Private · anonymous',u:'https://duck.ai/?q=%s&ia=chat'},
+  {k:'grok',n:'Grok',s:'xAI',u:'https://grok.com/?q=%s'},
+  {k:'chatgpt',n:'ChatGPT',s:'OpenAI',u:'https://chatgpt.com/?q=%s'},
+  {k:'perplexity',n:'Perplexity',s:'Answers + sources',u:'https://www.perplexity.ai/search?q=%s'}];
+$('aiGrid').innerHTML=AIS.map(function(a){return '<button type="button" class="ai" data-ai="'+a.k+'"><b>'+a.n+'</b><small>'+a.s+'</small></button>'}).join('');
+$('aiGrid').addEventListener('click',function(e){var b=e.target.closest('[data-ai]');if(!b)return;
+  var a=AIS.filter(function(x){return x.k===b.getAttribute('data-ai')})[0],q=$('aiQ').value.trim();
+  if(!q){toast('Type your question first');$('aiQ').focus();return;}
+  try{if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(q).catch(function(){});}catch(err){}
+  navigate(a.u.replace('%s',encodeURIComponent(q)),true);toast('Opening '+a.n+'…');
+});
+
+/* ── Online/offline ── */
+window.addEventListener('online',function(){toast('Back online');loadWeather();loadSports();});
+window.addEventListener('offline',function(){toast('You’re offline');});
+
+/* ── PNG touch icon for iOS (generated locally from the SVG) ── */
+(function(){try{var img=new Image();img.onload=function(){try{var c=document.createElement('canvas');c.width=c.height=180;var x=c.getContext('2d');x.drawImage(img,0,0,180,180);$('touchicon').href=c.toDataURL('image/png');}catch(e){}};img.src=$('touchicon').href;}catch(e){}})();
+
+function renderAll(){renderEngines();renderFavs();renderStats();renderPriv();renderLeagues();}
+renderAll();loadWeather();loadSports();
+window.BRY={state:function(){return S},adHost:adHost,toURL:toURL};
+})();
+</script>
+</body>
+</html>
