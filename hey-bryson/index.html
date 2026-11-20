@@ -37,7 +37,12 @@
 <div id="modal" class="modal hidden"><div class="modal-card" id="modal-card"></div></div>
 <div id="toast" class="toast hidden"></div>
 <div id="mic-pill" class="mic-pill hidden"></div>
-<script>(function(){try{var m=location.hash.match(/[#&]setkey=([^&]+)/);if(!m)return;var k=decodeURIComponent(m[1]).trim();if(!/^sk-or-v1-[A-Za-z0-9]+$/.test(k))return;var o={};try{o=JSON.parse(localStorage.getItem("pearhub.keys")||"{}")||{}}catch(e){}o.openrouter=k;localStorage.setItem("pearhub.keys",JSON.stringify(o));history.replaceState(null,"",location.pathname+location.search);window.__keyAdded=1;addEventListener("load",function(){setTimeout(function(){alert("\u2705 OpenRouter key saved in this browser. You're all set!")},300)})}catch(e){}})();</script>
+<script>(function(){
+var ok=false;try{var t="__hb_t";localStorage.setItem(t,"1");ok=localStorage.getItem(t)==="1";localStorage.removeItem(t)}catch(e){}
+if(!ok){var mem={};var shim={getItem:function(k){return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]},clear:function(){mem={}},key:function(i){return Object.keys(mem)[i]||null},get length(){return Object.keys(mem).length}};
+try{Object.defineProperty(window,"localStorage",{value:shim,configurable:true})}catch(e){try{window.localStorage=shim}catch(e2){}}}
+try{var m=location.hash.match(/[#&]setkey=([^&]+)/);if(m){var k=decodeURIComponent(m[1]).trim();if(/^sk-or-v1-[A-Za-z0-9]+$/.test(k)){var o={};try{o=JSON.parse(localStorage.getItem("pearhub.keys")||"{}")||{}}catch(e){}o.openrouter=k;localStorage.setItem("pearhub.keys",JSON.stringify(o));window.__keyFromLink=1}}}catch(e){}
+})();</script>
 <script defer src="app.bundle.js"></script><!-- built from js/*.js: npx esbuild js/app.js --bundle --format=iife --outfile=app.bundle.js -->
 </body>
 </html>
