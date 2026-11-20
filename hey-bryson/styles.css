@@ -131,3 +131,4 @@ a.btn{text-decoration:none;color:var(--text);display:inline-block}
   .savebar{position:sticky;bottom:-16px;background:var(--panel);padding:10px 0 12px;margin-bottom:-16px;z-index:3;border-top:1px solid var(--line)}
 }
 @media (max-width:760px){.toast{bottom:150px}}
+.free-note{border-color:#8fd66b66;background:#8fd66b14;padding:10px 12px;margin:8px 0 12px}

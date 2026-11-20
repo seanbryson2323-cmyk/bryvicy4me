@@ -137,31 +137,65 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
     return u;
   }
   var dbp;
+  var MEMDB = /* @__PURE__ */ new Map();
+  var useMemDb = false;
   function db() {
     if (!dbp) dbp = new Promise((res, rej) => {
-      const r = indexedDB.open("pearhub", 1);
+      let r;
+      try {
+        r = indexedDB.open("pearhub", 1);
+      } catch (e) {
+        rej(e);
+        return;
+      }
       r.onupgradeneeded = () => {
         const s = r.result.createObjectStore("conversations", { keyPath: "id" });
         s.createIndex("updatedAt", "updatedAt");
       };
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error("blocked"));
+      setTimeout(() => rej(new Error("IndexedDB timeout")), 4e3);
     });
     return dbp;
   }
+  function memTx(fn) {
+    var _a, _b;
+    const fake = { put: (v) => {
+      MEMDB.set(v.id, v);
+      return { result: v.id };
+    }, get: (id) => ({ result: MEMDB.get(id) }), delete: (id) => {
+      MEMDB.delete(id);
+      return {};
+    }, clear: () => {
+      MEMDB.clear();
+      return {};
+    }, getAll: () => ({ result: [...MEMDB.values()] }) };
+    const r = fn(fake);
+    return r ? (_b = JSON.parse(JSON.stringify((_a = r.result) != null ? _a : null))) != null ? _b : void 0 : void 0;
+  }
   async function tx(mode, fn) {
-    const d = await db();
-    return new Promise((res, rej) => {
-      const t = d.transaction("conversations", mode);
-      const s = t.objectStore("conversations");
-      let out;
-      const r = fn(s);
-      if (r) r.onsuccess = () => {
-        out = r.result;
-      };
-      t.oncomplete = () => res(out);
-      t.onerror = () => rej(t.error);
-    });
+    if (!useMemDb) {
+      try {
+        const d = await db();
+        return await new Promise((res, rej) => {
+          const t = d.transaction("conversations", mode);
+          const s = t.objectStore("conversations");
+          let out;
+          const r = fn(s);
+          if (r) r.onsuccess = () => {
+            out = r.result;
+          };
+          t.oncomplete = () => res(out);
+          t.onerror = () => rej(t.error);
+          t.onabort = () => rej(t.error);
+        });
+      } catch (e) {
+        useMemDb = true;
+        window.__hbMemStorage = window.__hbMemStorage || 1;
+      }
+    }
+    return memTx(fn);
   }
   function stampMessages(c2) {
     for (const m of c2.messages) {
@@ -198,12 +232,24 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
     xai: { label: "xAI (Grok)", base: "https://api.x.ai/v1", type: "openai", keyUrl: "https://console.x.ai", models: ["grok-4.7", "grok-4.6"] },
     anthropic: { label: "Anthropic (Claude)", base: "https://api.anthropic.com/v1", type: "anthropic", keyUrl: "https://console.anthropic.com/settings/keys", models: ["claude-sonnet-5.5", "claude-haiku-5.5", "claude-opus-5.5"] },
     gemini: { label: "Google Gemini", base: "https://generativelanguage.googleapis.com/v1beta/openai", type: "openai", keyUrl: "https://aistudio.google.com/apikey", models: ["gemini-3.8-flash", "gemini-3.5-flash-lite"] },
-    custom: { label: "Custom (OpenAI-compatible)", base: "", type: "openai", keyUrl: "", models: [] }
+    custom: { label: "Custom (OpenAI-compatible)", base: "", type: "openai", keyUrl: "", models: [] },
+    free: { label: "Free AI (no key)", base: "https://text.pollinations.ai", type: "free", keyUrl: "", models: ["openai"] }
   };
+  var FREE_AI = {
+    openai: "https://text.pollinations.ai/openai",
+    plain: "https://text.pollinations.ai/",
+    llm7: "https://api.llm7.io/v1/chat/completions",
+    model: "openai",
+    llm7Model: "default",
+    label: "Free AI"
+  };
+  var usesFree = (provider) => provider === "free" || (provider !== "custom" ? !getKeys()[provider] : !baseUrl("custom"));
   var baseUrl = (p) => ((getSettings().baseUrls || {})[p] || PROVIDERS[p].base || "").replace(/\/+$/, "");
-  var hasKey = (p) => p === "custom" ? !!baseUrl("custom") : !!getKeys()[p];
-  var anyKey = () => Object.keys(PROVIDERS).some(hasKey);
-  var modelLabel = (provider, model) => `${model}${provider !== "openrouter" ? " \xB7 " + PROVIDERS[provider].label.split(" ")[0] : ""}`;
+  var hasKey = (p) => p === "free" ? true : p === "custom" ? !!baseUrl("custom") : !!getKeys()[p];
+  var modelLabel = (provider, model) => {
+    var _a;
+    return usesFree(provider) ? "Free AI \xB7 no key needed" : `${model}${provider !== "openrouter" ? " \xB7 " + (((_a = PROVIDERS[provider]) == null ? void 0 : _a.label) || provider).split(" ")[0] : ""}`;
+  };
   var ProviderError = class extends Error {
   };
   function friendly(status, body, provider) {
@@ -251,26 +297,28 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
     return p ? prompt * p[0] + completion * p[1] : 0;
   }
   async function chat(opts) {
-    const { provider, model, system, signal, onDelta } = opts;
-    if (!PROVIDERS[provider]) throw new ProviderError(`Unknown provider ${provider}`);
-    if (!hasKey(provider)) throw new ProviderError(`No ${PROVIDERS[provider].label} key yet. Add one in Settings.`);
+    const { model, system, signal, onDelta } = opts;
+    let provider = PROVIDERS[opts.provider] ? opts.provider : "free";
+    const free = usesFree(provider);
+    if (free) provider = "free";
     const s = getSettings();
     const u = getUsage();
     if (u.requests >= (s.limits.dailyRequests || 200)) throw new ProviderError(`Daily request cap reached (${s.limits.dailyRequests}). Raise it in Settings \u2192 Limits if you want more.`);
     const messages = mergeRoles(opts.messages);
     let result;
     try {
-      result = PROVIDERS[provider].type === "anthropic" ? await anthropicChat(provider, model, system, messages, signal, onDelta) : await openaiChat(provider, model, system, messages, signal, onDelta, opts.stream !== false);
+      result = free ? await freeChat(system, messages, signal, onDelta, opts.stream !== false) : PROVIDERS[provider].type === "anthropic" ? await anthropicChat(provider, model, system, messages, signal, onDelta) : await openaiChat(provider, model, system, messages, signal, onDelta, opts.stream !== false);
     } catch (e) {
       if (e.name !== "AbortError") addUsage({ requests: 1, errors: 1 });
       if (e instanceof ProviderError || e.name === "AbortError") throw e;
+      if (free) throw new ProviderError("The free AI is busy right now. Please try again in a minute.");
       throw new ProviderError(`Could not reach ${PROVIDERS[provider].label}: ${e.message}.` + (/fetch/i.test(e.message) ? ` The browser could not read the reply. This usually means the key is wrong (${provider === "openai" ? "OpenAI hides key errors from browsers" : "check it in Settings"}), you're offline, or a network filter blocks it.${provider !== "openrouter" ? " Tip: use the same model through OpenRouter instead." : ""}` : ""));
     }
     const prompt = result.usage.prompt || estimateTokens((system || "") + messages.map((m) => m.content).join(" "));
     const completion = result.usage.completion || estimateTokens(result.text);
     const cost = typeof result.cost === "number" ? result.cost : priceCost(provider, model, prompt, completion);
     addUsage({ requests: 1, prompt, completion, cost });
-    return { text: result.text, usage: { prompt, completion }, cost };
+    return { text: result.text, usage: { prompt, completion }, cost, model: free ? result.model || FREE_AI.label : model, free };
   }
   var estimateTokens = (s) => Math.ceil((s || "").length / 4);
   async function openaiChat(provider, model, system, messages, signal, onDelta, stream) {
@@ -334,6 +382,134 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
     const text = (j.content || []).filter((c2) => c2.type === "text").map((c2) => c2.text).join("");
     onDelta == null ? void 0 : onDelta(text);
     return { text, usage: { prompt: ((_a = j.usage) == null ? void 0 : _a.input_tokens) || 0, completion: ((_b = j.usage) == null ? void 0 : _b.output_tokens) || 0 } };
+  }
+  function trimForFree(system, messages) {
+    const max = 24e3;
+    let total = (system || "").length;
+    const out = [];
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      total += m.content.length;
+      if (out.length && total > max) break;
+      out.unshift({ role: m.role, content: m.content.slice(-max) });
+    }
+    if (out[0] && out[0].role !== "user") out.unshift({ role: "user", content: "(continue)" });
+    return out;
+  }
+  var wait = (ms, signal) => new Promise((res, rej) => {
+    const t = setTimeout(res, ms);
+    signal == null ? void 0 : signal.addEventListener("abort", () => {
+      clearTimeout(t);
+      rej(new DOMException("Aborted", "AbortError"));
+    }, { once: true });
+  });
+  function attemptSignal(signal, ms) {
+    const c2 = new AbortController();
+    const t = setTimeout(() => c2.abort(), ms);
+    signal == null ? void 0 : signal.addEventListener("abort", () => c2.abort(), { once: true });
+    return { signal: c2.signal, done: () => clearTimeout(t), timedOut: () => c2.signal.aborted && !(signal == null ? void 0 : signal.aborted) };
+  }
+  var cleanFree = (t) => String(t || "").replace(/\n*---\n+\*\*Support Pollinations[\s\S]*$/i, "").replace(/\n*🌸 \*\*Ad\*\*[\s\S]*$/i, "").trim();
+  var FreeHttpError = class extends Error {
+    constructor(status, body) {
+      super(`HTTP ${status}`);
+      this.status = status;
+      this.body = body;
+    }
+  };
+  async function freeChat(system, messages, signal, onDelta, stream) {
+    const msgs = [...system ? [{ role: "system", content: system }] : [], ...trimForFree(system, messages)];
+    const seed = Math.floor(Math.random() * 1e9);
+    const attempts = [
+      () => freeOpenAI(FREE_AI.openai, { model: FREE_AI.model, messages: msgs, seed, private: true, stream }, signal, onDelta, 9e4),
+      () => freeOpenAI(FREE_AI.openai, { model: FREE_AI.model, messages: msgs, seed: seed + 1, private: true, stream: false }, signal, onDelta, 9e4),
+      () => freePlain(msgs, seed + 2, signal, onDelta),
+      () => freeOpenAI(FREE_AI.llm7, { model: FREE_AI.llm7Model, messages: msgs, stream: false }, signal, onDelta, 6e4)
+    ];
+    let last;
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        const r = await attempts[i]();
+        if (r.text && r.text.trim()) return r;
+        last = new Error("empty reply");
+      } catch (e) {
+        if (e.name === "AbortError" && (signal == null ? void 0 : signal.aborted)) throw e;
+        last = e;
+        if (e instanceof FreeHttpError && e.status === 400 && i === 0) {
+        }
+      }
+      if (i === 0) await wait(1200, signal);
+    }
+    throw new ProviderError("The free AI is busy right now. Please try again in a minute." + ((last == null ? void 0 : last.status) === 429 ? " (too many requests at once)" : ""));
+  }
+  async function freeOpenAI(url, body, signal, onDelta, ms) {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    const a = attemptSignal(signal, ms);
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: a.signal });
+      if (!r.ok) throw new FreeHttpError(r.status, await r.text().catch(() => ""));
+      const ctype = r.headers.get("content-type") || "";
+      if (!body.stream || !ctype.includes("text/event-stream")) {
+        const j = await r.json();
+        if (j.error) throw new FreeHttpError(j.error.code || 500, JSON.stringify(j.error));
+        const text2 = cleanFree((_c = (_b = (_a = j.choices) == null ? void 0 : _a[0]) == null ? void 0 : _b.message) == null ? void 0 : _c.content);
+        onDelta == null ? void 0 : onDelta(text2);
+        return { text: text2, usage: { prompt: ((_d = j.usage) == null ? void 0 : _d.prompt_tokens) || 0, completion: ((_e = j.usage) == null ? void 0 : _e.completion_tokens) || 0 }, cost: 0, model: j.model ? `${FREE_AI.label} \xB7 ${j.model}` : FREE_AI.label };
+      }
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "", text = "", usage = {}, model = "";
+      for (; ; ) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, i).trim();
+          buf = buf.slice(i + 1);
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (data === "[DONE]") continue;
+          let j;
+          try {
+            j = JSON.parse(data);
+          } catch {
+            continue;
+          }
+          if (j.error) throw new FreeHttpError(j.error.code || 500, JSON.stringify(j.error));
+          if (j.model) model = j.model;
+          const d = (_h = (_g = (_f = j.choices) == null ? void 0 : _f[0]) == null ? void 0 : _g.delta) == null ? void 0 : _h.content;
+          if (d) {
+            text += d;
+            onDelta == null ? void 0 : onDelta(cleanFree(text));
+          }
+          if (j.usage) usage = { prompt: j.usage.prompt_tokens || 0, completion: j.usage.completion_tokens || 0 };
+        }
+      }
+      text = cleanFree(text);
+      onDelta == null ? void 0 : onDelta(text);
+      return { text, usage, cost: 0, model: model ? `${FREE_AI.label} \xB7 ${model}` : FREE_AI.label };
+    } catch (e) {
+      if (a.timedOut()) throw new FreeHttpError(408, "timeout");
+      throw e;
+    } finally {
+      a.done();
+    }
+  }
+  async function freePlain(msgs, seed, signal, onDelta) {
+    const a = attemptSignal(signal, 9e4);
+    try {
+      const r = await fetch(FREE_AI.plain, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ model: FREE_AI.model, messages: msgs, seed, private: true }), signal: a.signal });
+      if (!r.ok) throw new FreeHttpError(r.status, await r.text().catch(() => ""));
+      const text = cleanFree(await r.text());
+      onDelta == null ? void 0 : onDelta(text);
+      return { text, usage: {}, cost: 0, model: FREE_AI.label };
+    } catch (e) {
+      if (a.timedOut()) throw new FreeHttpError(408, "timeout");
+      throw e;
+    } finally {
+      a.done();
+    }
   }
   async function listModels(provider) {
     const h = headersFor(provider);
@@ -881,47 +1057,9 @@ Speaking style: ${st}`;
   }
   function renderBanner() {
     const b = $("#banner");
-    if (anyKey()) {
-      if (storagePersists()) {
-        b.classList.add("hidden");
-        return;
-      }
-      b.innerHTML = `\u26A0\uFE0F Your key is working, but this browser is blocking saved data (private mode, DuckDuckGo Fire, or blocked storage), so it will be forgotten when you close the page.`;
-      b.classList.remove("hidden");
-      return;
-    }
-    b.innerHTML = `<div>\u{1F44B} Paste your free <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter key</a> to start:</div>
-  <div class="quickkey"><input type="text" class="secret" id="qk-input" placeholder="sk-or-v1-\u2026" ${KEY_INPUT_ATTRS}><button class="btn small" id="qk-paste" type="button">\u{1F4CB} Paste</button><button class="btn primary small" id="qk-save" type="button">Save key</button></div>`;
-    b.classList.remove("hidden");
-    const inp = $("#qk-input");
-    const go = (auto) => {
-      const v = cleanKey(inp.value);
-      if (!v) {
-        if (!auto) toast("Paste your OpenRouter key (it starts with sk-or-v1-) first");
-        return;
-      }
-      if (!looksLikeOrKey(v)) {
-        if (!auto) toast("That doesn't look like an OpenRouter key. It should start with sk-or-v1-", 5e3);
-        return;
-      }
-      saveOneKey("openrouter", v);
-      if (state.view === "settings") renderers.settings();
-    };
-    $("#qk-save").onclick = () => go(false);
-    inp.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") go(false);
-    });
-    inp.addEventListener("paste", () => setTimeout(() => go(true), 0));
-    inp.addEventListener("change", () => go(true));
-    $("#qk-paste").onclick = async () => {
-      try {
-        inp.value = await navigator.clipboard.readText();
-        go(false);
-      } catch {
-        inp.focus();
-        toast("Tap and hold in the box, then tap Paste", 4e3);
-      }
-    };
+    if (!b) return;
+    b.classList.add("hidden");
+    b.innerHTML = "";
   }
   var renderers = {};
   function show(view) {
@@ -1017,7 +1155,7 @@ Speaking style: ${st}`;
     inp.value = "";
     await saveConv(c2);
     renderThread();
-    const m = { role: "assistant", botId: bot.id, name: bot.name, emoji: bot.emoji, color: bot.color, model: bot.model, provider: bot.provider, content: "", ts: Date.now() };
+    const m = { role: "assistant", botId: bot.id, name: bot.name, emoji: bot.emoji, color: bot.color, model: usesFree(bot.provider) ? "Free AI" : bot.model, provider: bot.provider, content: "", ts: Date.now() };
     c2.messages.push(m);
     renderThread();
     const el = $(`#thread .msg[data-i="${c2.messages.length - 1}"] .content`);
@@ -1042,6 +1180,7 @@ Speaking style: ${st}`;
       m.content = r.text || "(empty reply)";
       m.cost = r.cost;
       m.usage = r.usage;
+      if (r.free) m.model = r.model;
     } catch (e) {
       if (e.name === "AbortError") {
         m.content = (el.textContent || "") + " [stopped]";
@@ -1118,7 +1257,9 @@ Speaking style: ${st}`;
     state.brainBusy = true;
     $("#brain-ask").disabled = true;
     const out = $("#brain-out");
-    out.innerHTML = `<h2>Individual answers</h2><div class="answers">${members.map((m, i) => `<div class="answer" id="ans-${i}"><div class="ah"><b>${esc(modelLabel(m.provider, m.model))}</b><span class="st">\u23F3</span></div><div class="content muted">waiting\u2026</div></div>`).join("")}</div>
+    const FREE_LENSES = ["Focus on accuracy: reason step by step and double-check facts.", "Focus on practical, hands-on advice with concrete examples, parts, numbers or code.", "Be the skeptic: look for pitfalls, risks, edge cases and better alternatives.", "Focus on the simplest, clearest explanation a beginner could follow."];
+    const memberLabel = (m, i) => usesFree(m.provider) ? `Free AI \xB7 panelist ${i + 1}` : modelLabel(m.provider, m.model);
+    out.innerHTML = `<h2>Individual answers</h2><div class="answers">${members.map((m, i) => `<div class="answer" id="ans-${i}"><div class="ah"><b>${esc(memberLabel(m, i))}</b><span class="st">\u23F3</span></div><div class="content muted">waiting\u2026</div></div>`).join("")}</div>
     <h2>\u2696\uFE0F Merged best answer</h2><p class="muted small" id="brain-asked">Asked ${fmtTime(Date.now())}</p><div class="card final" id="brain-final"><div class="bubble"><span class="typing">Waiting for the individual answers\u2026</span></div></div>`;
     const conv = newConv("superbrain", q.slice(0, 70), { botNames: ["Super Brain"] });
     conv.messages.push({ role: "user", content: q, ts: Date.now() });
@@ -1126,7 +1267,7 @@ Speaking style: ${st}`;
     const results = await Promise.allSettled(members.map((m, i) => chat({
       provider: m.provider,
       model: m.model,
-      system,
+      system: usesFree(m.provider) ? system + "\n\nYour angle on this panel: " + FREE_LENSES[i % FREE_LENSES.length] : system,
       messages: [{ role: "user", content: q }],
       onDelta: (t) => {
         const c2 = $(`#ans-${i} .content`);
@@ -1142,7 +1283,7 @@ Speaking style: ${st}`;
       const card = $(`#ans-${i}`);
       const m = members[i];
       if (r.status === "fulfilled" && r.value.text.trim()) {
-        good.push({ m, text: r.value.text });
+        good.push({ m, text: r.value.text, label: memberLabel(m, i) });
         card.querySelector(".st").textContent = "\u2705 " + fmtTime(Date.now());
         card.querySelector(".content").innerHTML = md(r.value.text);
         conv.messages.push({ role: "assistant", name: m.model, model: m.model, provider: m.provider, content: r.value.text, ts: Date.now(), emoji: "\u{1F9E9}", color: "#60a5fa" });
@@ -1155,7 +1296,7 @@ Speaking style: ${st}`;
     });
     const fin = $("#brain-final .bubble");
     if (!good.length) {
-      fin.innerHTML = `<span style="color:var(--danger)">Every model failed, so there is nothing to merge. Check your keys and models in Settings.</span>`;
+      fin.innerHTML = `<span style="color:var(--danger)">Every model failed, so there is nothing to merge. Please try again in a minute.</span>`;
     } else {
       fin.innerHTML = '<span class="typing">Judge is comparing and merging\u2026</span>';
       const prompt = `Question:
@@ -1163,7 +1304,7 @@ ${q}
 
 Candidate answers from ${good.length} different AI models:
 
-${good.map((g, i) => `### Answer ${i + 1} (${g.m.model})
+${good.map((g, i) => `### Answer ${i + 1} (${g.label})
 ${g.text}`).join("\n\n")}
 
 Your job: compare the answers, point out errors, gaps or disagreements, then write the single best final answer that combines their strongest parts and fixes their mistakes. Use these sections: **Where they agree**, **Corrections & disagreements**, **Final answer**.`;
@@ -1171,7 +1312,7 @@ Your job: compare the answers, point out errors, gaps or disagreements, then wri
         const r = await chat({ provider: agg.provider, model: agg.model, system: "You are the Super Brain judge: a meticulous expert who critiques and synthesizes answers from several AI models into one best answer.", messages: [{ role: "user", content: prompt }], onDelta: (t) => {
           fin.innerHTML = md(t);
         } });
-        fin.innerHTML = md(r.text) + `<p class="muted small">Merged by ${esc(agg.model)} \xB7 ${tsHtml({ ts: Date.now() })}</p>`;
+        fin.innerHTML = md(r.text) + `<p class="muted small">Merged by ${esc(usesFree(agg.provider) ? "Free AI" : agg.model)} \xB7 ${tsHtml({ ts: Date.now() })}</p>`;
         conv.messages.push({ role: "assistant", name: "Super Brain", model: agg.model, provider: agg.provider, content: r.text, final: true, ts: Date.now(), emoji: "\u{1F9E0}", color: "#8fd66b" });
         if (opts.speakReply) await speak(r.text, { voice: "narrator" });
         else if ((_c = $("#brain-speak")) == null ? void 0 : _c.checked) speak(r.text, { voice: "narrator" });
@@ -1394,7 +1535,7 @@ Speak only as ${bot.name}. Keep each turn under 150 words. Build on or challenge
 ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so far."}` }];
       for (const m2 of conv.messages) if (m2.role === "assistant" && !m2.error) msgs.push(m2.botId === bot.id ? { role: "assistant", content: m2.content } : { role: "user", content: `${m2.name}: ${m2.content}` });
       if (t > 0) msgs.push({ role: "user", content: `(Your turn, ${bot.name}.)` });
-      const m = { role: "assistant", botId: bot.id, name: bot.name, emoji: bot.emoji, color: bot.color, model: bot.model, provider: bot.provider, content: "", ts: Date.now() };
+      const m = { role: "assistant", botId: bot.id, name: bot.name, emoji: bot.emoji, color: bot.color, model: usesFree(bot.provider) ? "Free AI" : bot.model, provider: bot.provider, content: "", ts: Date.now() };
       conv.messages.push(m);
       run.turn = t + 1;
       if (state.view === "idle") renderers.idle();
@@ -1407,6 +1548,7 @@ ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so f
         m.content = (r.text || "").replace(new RegExp("^\\s*\\**" + bot.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\**\\s*:\\s*", "i"), "").trim() || "(no reply)";
         m.cost = r.cost;
         run.cost += r.cost || 0;
+        if (r.free) m.model = r.model;
       } catch (e) {
         conv.messages.pop();
         if (e.name !== "AbortError") {
@@ -1528,10 +1670,11 @@ ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so f
     const keys = getKeys();
     const cache = getModelCache();
     const v = $("#view-settings");
-    v.innerHTML = `<h1>\u2699\uFE0F Settings</h1><p class="sub">API keys are stored only in this browser (localStorage) and are sent only to the provider they belong to. Nothing is hard-coded and there is no server.</p>
-  <div class="card"><h2 style="margin-top:0">API keys</h2><p class="muted small">Only OpenRouter is needed: one free key reaches free models plus paid GPT, Claude, Gemini, Grok, DeepSeek and Qwen. Direct keys are optional.</p>
+    v.innerHTML = `<h1>\u2699\uFE0F Settings</h1><p class="sub">API keys are optional and stored only in this browser. They are sent only to the provider they belong to.</p>
+  <div class="card free-note" id="free-note"><b>\u2705 Using free no-key AI.</b> <span class="muted small">Every bot, Super Brain and Idle Talk work with nothing to set up. Add an OpenRouter key below only if you want more models (optional).${storagePersists() ? "" : " This browser doesn't keep saved data after you close it, so chats and settings start fresh each time."}</span></div>
+  <div class="card"><h2 style="margin-top:0">API keys</h2><p class="muted small">All optional. With an OpenRouter key, bots use the models you picked (free models plus paid GPT, Claude, Gemini, Grok, DeepSeek and Qwen). Without one, they use the free no-key AI.</p>
   ${KEY_PROVIDERS.map((p) => `<div class="keyrow"><div><span class="status-dot ${keys[p] ? "ok" : ""}"></span> ${esc(PROVIDERS[p].label)}</div><input type="text" class="secret" id="key-${p}" value="${esc(keys[p] || "")}" placeholder="${p === "openrouter" ? "sk-or-v1-\u2026" : "optional"}" ${KEY_INPUT_ATTRS}>
-    <div class="row" style="flex-wrap:nowrap">${p === "openrouter" ? '<button class="btn small primary" data-save1="openrouter" type="button">Save</button>' : ""}<button class="btn small" data-show="${p}" type="button">\u{1F441}</button><button class="btn small" data-test="${p}" type="button">Test</button><a class="btn small" href="${PROVIDERS[p].keyUrl}" target="_blank" rel="noopener">Get key</a></div></div>${p === "openrouter" ? `<div id="or-status" class="keys-msg ${keys.openrouter ? storagePersists() ? "ok" : "warn" : ""}">${keys.openrouter ? storagePersists() ? "\u2705 OpenRouter key saved in this browser" : "\u26A0\uFE0F Key works now, but this browser won't keep it after you close the page" : "Paste your key above. It saves automatically."}</div>` : ""}`).join("")}
+    <div class="row" style="flex-wrap:nowrap">${p === "openrouter" ? '<button class="btn small primary" data-save1="openrouter" type="button">Save</button>' : ""}<button class="btn small" data-show="${p}" type="button">\u{1F441}</button><button class="btn small" data-test="${p}" type="button">Test</button><a class="btn small" href="${PROVIDERS[p].keyUrl}" target="_blank" rel="noopener">Get key</a></div></div>${p === "openrouter" ? `<div id="or-status" class="keys-msg ${keys.openrouter ? storagePersists() ? "ok" : "warn" : ""}">${keys.openrouter ? storagePersists() ? "\u2705 OpenRouter key saved in this browser" : "\u26A0\uFE0F Key works now, but this browser won't keep it after you close the page" : "Optional. No key = free no-key AI."}</div>` : ""}`).join("")}
   <div class="keyrow"><div><span class="status-dot ${keys.elevenlabs ? "ok" : ""}"></span> ElevenLabs (voices)</div><input type="text" class="secret" id="key-elevenlabs" value="${esc(keys.elevenlabs || "")}" placeholder="optional, premium voices" ${KEY_INPUT_ATTRS}><div class="row" style="flex-wrap:nowrap"><button class="btn small" data-show="elevenlabs" type="button">\u{1F441}</button><a class="btn small" href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener">Get key</a></div></div>
   <details><summary>Advanced: custom OpenAI-compatible server and base URLs</summary>
     <div class="row"><div class="grow"><label>Custom provider name</label><input type="text" id="custom-name" value="${esc(s.customName)}"></div><div class="grow"><label>Custom API key</label><input type="text" class="secret" id="key-custom" value="${esc(keys.custom || "")}" ${KEY_INPUT_ATTRS}></div></div>
@@ -1782,11 +1925,6 @@ ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so f
     const q = p.get("q");
     if (!q) return;
     history.replaceState(null, "", location.pathname);
-    if (!anyKey()) {
-      show("settings");
-      toast("Add your OpenRouter key first, then ask again.", 4e3);
-      return;
-    }
     if (p.get("mode") === "brain") {
       show("brain");
       await askBrain({ text: q });
