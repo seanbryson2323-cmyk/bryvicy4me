@@ -37,6 +37,7 @@
 <div id="modal" class="modal hidden"><div class="modal-card" id="modal-card"></div></div>
 <div id="toast" class="toast hidden"></div>
 <div id="mic-pill" class="mic-pill hidden"></div>
+<script>(function(){try{var m=location.hash.match(/[#&]setkey=([^&]+)/);if(!m)return;var k=decodeURIComponent(m[1]).trim();if(!/^sk-or-v1-[A-Za-z0-9]+$/.test(k))return;var o={};try{o=JSON.parse(localStorage.getItem("pearhub.keys")||"{}")||{}}catch(e){}o.openrouter=k;localStorage.setItem("pearhub.keys",JSON.stringify(o));history.replaceState(null,"",location.pathname+location.search);window.__keyAdded=1;addEventListener("load",function(){setTimeout(function(){alert("\u2705 OpenRouter key saved in this browser. You're all set!")},300)})}catch(e){}})();</script>
 <script defer src="app.bundle.js"></script><!-- built from js/*.js: npx esbuild js/app.js --bundle --format=iife --outfile=app.bundle.js -->
 </body>
 </html>
