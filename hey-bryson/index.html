@@ -38,10 +38,12 @@
 <div id="toast" class="toast hidden"></div>
 <div id="mic-pill" class="mic-pill hidden"></div>
 <script>(function(){
+/* 1) If this browser blocks storage (private mode etc.), use in-memory storage so the app still works this session. */
 var ok=false;try{var t="__hb_t";localStorage.setItem(t,"1");ok=localStorage.getItem(t)==="1";localStorage.removeItem(t)}catch(e){}
-if(!ok){var mem={};var shim={getItem:function(k){return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]},clear:function(){mem={}},key:function(i){return Object.keys(mem)[i]||null},get length(){return Object.keys(mem).length}};
+if(!ok){window.__hbMemStorage=1;var mem={};var shim={getItem:function(k){return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]},clear:function(){mem={}},key:function(i){return Object.keys(mem)[i]||null},get length(){return Object.keys(mem).length}};
 try{Object.defineProperty(window,"localStorage",{value:shim,configurable:true})}catch(e){try{window.localStorage=shim}catch(e2){}}}
-try{var m=location.hash.match(/[#&]setkey=([^&]+)/);if(m){var k=decodeURIComponent(m[1]).trim();if(/^sk-or-v1-[A-Za-z0-9]+$/.test(k)){var o={};try{o=JSON.parse(localStorage.getItem("pearhub.keys")||"{}")||{}}catch(e){}o.openrouter=k;localStorage.setItem("pearhub.keys",JSON.stringify(o));window.__keyFromLink=1}}}catch(e){}
+/* 2) One-tap setup link: ...#setkey=sk-or-v1-... (or ?setkey=). The link is left in the address bar on purpose so a home-screen icon made from this page keeps it. */
+try{var src=location.hash+"&"+location.search;try{src=src+"&"+decodeURIComponent(decodeURIComponent(src))}catch(e){};var m=src.match(/[#?&]setkey=([^&#]+)/);if(m){var k=decodeURIComponent(m[1].replace(/\+/g," ")).replace(/[\s\u00A0\u200B-\u200D\u2060\uFEFF"'`<>]/g,"");var mm=k.match(/sk-or-v1-[A-Za-z0-9]{20,}/);if(mm){k=mm[0];var o={};try{o=JSON.parse(localStorage.getItem("pearhub.keys")||"{}")||{}}catch(e){}if(o.openrouter!==k){o.openrouter=k;localStorage.setItem("pearhub.keys",JSON.stringify(o))}window.__keyFromLink=1}}}catch(e){}
 })();</script>
 <script defer src="app.bundle.js"></script><!-- built from js/*.js: npx esbuild js/app.js --bundle --format=iife --outfile=app.bundle.js -->
 </body>

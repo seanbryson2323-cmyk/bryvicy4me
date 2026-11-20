@@ -13,17 +13,29 @@
     usage: "pearhub.usage",
     models: "pearhub.modelcache"
   };
+  var MEM = {};
   function read(k, fallback) {
     try {
-      const v = localStorage.getItem(k);
+      const v = Object.prototype.hasOwnProperty.call(MEM, k) ? MEM[k] : localStorage.getItem(k);
       return v ? JSON.parse(v) : fallback;
     } catch {
       return fallback;
     }
   }
   function write(k, v) {
-    localStorage.setItem(k, JSON.stringify(v));
+    const str = JSON.stringify(v);
+    try {
+      localStorage.setItem(k, str);
+      if (localStorage.getItem(k) === str) {
+        delete MEM[k];
+        return !window.__hbMemStorage;
+      }
+    } catch {
+    }
+    MEM[k] = str;
+    return false;
   }
+  var storagePersists = () => !window.__hbMemStorage && !Object.keys(MEM).length;
   var uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   var today = () => (/* @__PURE__ */ new Date()).toLocaleDateString("en-CA");
   function defaultSettings() {
@@ -262,7 +274,7 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
   }
   var estimateTokens = (s) => Math.ceil((s || "").length / 4);
   async function openaiChat(provider, model, system, messages, signal, onDelta, stream) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     const body = { model, messages: system ? [{ role: "system", content: system }, ...messages] : messages, stream };
     if (stream && provider !== "gemini") body.stream_options = { include_usage: true };
     const r = await fetch(`${baseUrl(provider)}/chat/completions`, { method: "POST", headers: headersFor(provider), body: JSON.stringify(body), signal });
@@ -271,9 +283,9 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
     if (!stream || !ctype.includes("text/event-stream")) {
       const j = await r.json();
       if (j.error) throw friendly(j.error.code || 500, JSON.stringify(j), provider);
-      const text2 = ((_c = (_b = (_a = j.choices) == null ? void 0 : _a[0]) == null ? void 0 : _b.message) == null ? void 0 : _c.content) ?? "";
+      const text2 = (_d = (_c = (_b = (_a = j.choices) == null ? void 0 : _a[0]) == null ? void 0 : _b.message) == null ? void 0 : _c.content) != null ? _d : "";
       onDelta == null ? void 0 : onDelta(text2);
-      return { text: text2, usage: { prompt: ((_d = j.usage) == null ? void 0 : _d.prompt_tokens) || 0, completion: ((_e = j.usage) == null ? void 0 : _e.completion_tokens) || 0 }, cost: (_f = j.usage) == null ? void 0 : _f.cost };
+      return { text: text2, usage: { prompt: ((_e = j.usage) == null ? void 0 : _e.prompt_tokens) || 0, completion: ((_f = j.usage) == null ? void 0 : _f.completion_tokens) || 0 }, cost: (_g = j.usage) == null ? void 0 : _g.cost };
     }
     const reader = r.body.getReader();
     const dec = new TextDecoder();
@@ -296,7 +308,7 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
           continue;
         }
         if (j.error) throw friendly(j.error.code || 500, JSON.stringify(j), provider);
-        const d = (_i = (_h = (_g = j.choices) == null ? void 0 : _g[0]) == null ? void 0 : _h.delta) == null ? void 0 : _i.content;
+        const d = (_j = (_i = (_h = j.choices) == null ? void 0 : _h[0]) == null ? void 0 : _i.delta) == null ? void 0 : _j.content;
         if (d) {
           text += d;
           onDelta == null ? void 0 : onDelta(text);
@@ -343,7 +355,7 @@ Be concrete (exact parts, values, commands, code). Be motivated and persistent: 
   }
 
   // app/js/markdown.js
-  var esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c2]);
+  var esc = (s) => String(s != null ? s : "").replace(/[&<>"']/g, (c2) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c2]);
   function inline(s) {
     return s.replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>").replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   }
@@ -824,17 +836,91 @@ Speaking style: ${st}`;
     toast("This browser has no built-in voices. To hear bots here, choose OpenAI or ElevenLabs voices in Settings \u2192 Voices.", 6e3);
   });
   window.addEventListener("tts-error", (e) => toast("Premium voice failed, using browser voice: " + e.detail, 4e3));
+  var KEY_INPUT_ATTRS = 'autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore';
+  function cleanKey(raw, p = "openrouter") {
+    const s = String(raw || "").replace(/[\s\u00A0\u200B-\u200D\u2060\uFEFF"'`<>]/g, "");
+    if (p === "openrouter") {
+      const m = s.match(/sk-or-v1-[A-Za-z0-9]+/);
+      if (m) return m[0];
+    }
+    return s;
+  }
+  var looksLikeOrKey = (v) => /^sk-or-v1-[A-Za-z0-9]{20,}$/.test(v);
+  function saveOneKey(p, raw, { quiet = false } = {}) {
+    const val = cleanKey(raw, p);
+    const k = { ...getKeys() };
+    if ((k[p] || "") === val && val) {
+      if (!quiet) keySavedUi(p, storagePersists() ? "saved" : "memory", true);
+      return storagePersists() ? "saved" : "memory";
+    }
+    if (val) k[p] = val;
+    else delete k[p];
+    const persisted = saveKeys(k);
+    const res = !val ? "cleared" : persisted ? "saved" : "memory";
+    keySavedUi(p, res, quiet);
+    return res;
+  }
+  function keySavedUi(p, res, quiet) {
+    var _a, _b, _c;
+    const label = ((_a = PROVIDERS[p]) == null ? void 0 : _a.label) || (p === "elevenlabs" ? "ElevenLabs" : p);
+    const msg = res === "saved" ? `\u2705 ${label} key saved in this browser` : res === "memory" ? `\u26A0\uFE0F ${label} key works now, but this browser won't keep it after you close the page (private mode or blocked storage). Use your one-tap setup link each time.` : `${label} key removed`;
+    const dot = (_c = (_b = $(`#key-${p}`)) == null ? void 0 : _b.closest(".keyrow")) == null ? void 0 : _c.querySelector(".status-dot");
+    if (dot) dot.classList.toggle("ok", res !== "cleared");
+    const st = $("#keys-msg");
+    if (st) {
+      st.textContent = res === "saved" ? "\u2705 Saved" : res === "memory" ? "\u26A0\uFE0F Not kept after closing" : "";
+      st.className = "keys-msg " + (res === "memory" ? "warn" : res === "saved" ? "ok" : "");
+    }
+    const or = $("#or-status");
+    if (or && p === "openrouter") {
+      or.textContent = msg;
+      or.className = "keys-msg " + (res === "memory" ? "warn" : res === "saved" ? "ok" : "");
+    }
+    if (!quiet) toast(msg, res === "memory" ? 7e3 : 3500);
+    renderBanner();
+  }
   function renderBanner() {
     const b = $("#banner");
     if (anyKey()) {
-      b.classList.add("hidden");
+      if (storagePersists()) {
+        b.classList.add("hidden");
+        return;
+      }
+      b.innerHTML = `\u26A0\uFE0F Your key is working, but this browser is blocking saved data (private mode, DuckDuckGo Fire, or blocked storage), so it will be forgotten when you close the page.`;
+      b.classList.remove("hidden");
       return;
     }
-    b.innerHTML = `\u{1F44B} Add an API key to start. The quickest is a free <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter key</a> \u2192 paste it in <a href="#" id="banner-go">Settings</a>.`;
+    b.innerHTML = `<div>\u{1F44B} Paste your free <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter key</a> to start:</div>
+  <div class="quickkey"><input type="text" class="secret" id="qk-input" placeholder="sk-or-v1-\u2026" ${KEY_INPUT_ATTRS}><button class="btn small" id="qk-paste" type="button">\u{1F4CB} Paste</button><button class="btn primary small" id="qk-save" type="button">Save key</button></div>`;
     b.classList.remove("hidden");
-    $("#banner-go").onclick = (e) => {
-      e.preventDefault();
-      show("settings");
+    const inp = $("#qk-input");
+    const go = (auto) => {
+      const v = cleanKey(inp.value);
+      if (!v) {
+        if (!auto) toast("Paste your OpenRouter key (it starts with sk-or-v1-) first");
+        return;
+      }
+      if (!looksLikeOrKey(v)) {
+        if (!auto) toast("That doesn't look like an OpenRouter key. It should start with sk-or-v1-", 5e3);
+        return;
+      }
+      saveOneKey("openrouter", v);
+      if (state.view === "settings") renderers.settings();
+    };
+    $("#qk-save").onclick = () => go(false);
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") go(false);
+    });
+    inp.addEventListener("paste", () => setTimeout(() => go(true), 0));
+    inp.addEventListener("change", () => go(true));
+    $("#qk-paste").onclick = async () => {
+      try {
+        inp.value = await navigator.clipboard.readText();
+        go(false);
+      } catch {
+        inp.focus();
+        toast("Tap and hold in the box, then tap Paste", 4e3);
+      }
     };
   }
   var renderers = {};
@@ -919,12 +1005,12 @@ Speaking style: ${st}`;
     t.scrollTop = t.scrollHeight;
   }
   async function sendChat(opts = {}) {
-    var _a;
+    var _a, _b;
     const inp = $("#chat-input");
-    const text = (opts.text ?? inp.value).trim();
+    const text = ((_a = opts.text) != null ? _a : inp.value).trim();
     if (!text) return;
     const bot = botById(state.chatBotId);
-    if ((_a = state.idle) == null ? void 0 : _a.running) stopIdle("You started chatting, so idle talk stopped.");
+    if ((_b = state.idle) == null ? void 0 : _b.running) stopIdle("You started chatting, so idle talk stopped.");
     if (!state.chatConv) state.chatConv = newConv("chat", text.slice(0, 70), { botIds: [bot.id], botNames: [bot.name] });
     const c2 = state.chatConv;
     c2.messages.push({ role: "user", content: text, ts: Date.now() });
@@ -1020,12 +1106,12 @@ Speaking style: ${st}`;
     renderUsage();
   };
   async function askBrain(opts = {}) {
-    var _a, _b;
+    var _a, _b, _c;
     if (state.brainBusy) return;
-    const q = (opts.text ?? $("#brain-input").value).trim();
+    const q = ((_a = opts.text) != null ? _a : $("#brain-input").value).trim();
     if (!q) return;
     $("#brain-input").value = q;
-    if ((_a = state.idle) == null ? void 0 : _a.running) stopIdle("You asked Super Brain, so idle talk stopped.");
+    if ((_b = state.idle) == null ? void 0 : _b.running) stopIdle("You asked Super Brain, so idle talk stopped.");
     const s = getSettings();
     const members = s.brain.members;
     const agg = s.brain.aggregator;
@@ -1088,7 +1174,7 @@ Your job: compare the answers, point out errors, gaps or disagreements, then wri
         fin.innerHTML = md(r.text) + `<p class="muted small">Merged by ${esc(agg.model)} \xB7 ${tsHtml({ ts: Date.now() })}</p>`;
         conv.messages.push({ role: "assistant", name: "Super Brain", model: agg.model, provider: agg.provider, content: r.text, final: true, ts: Date.now(), emoji: "\u{1F9E0}", color: "#8fd66b" });
         if (opts.speakReply) await speak(r.text, { voice: "narrator" });
-        else if ((_b = $("#brain-speak")) == null ? void 0 : _b.checked) speak(r.text, { voice: "narrator" });
+        else if ((_c = $("#brain-speak")) == null ? void 0 : _c.checked) speak(r.text, { voice: "narrator" });
       } catch (e) {
         fin.innerHTML = `<span style="color:var(--danger)">Judge failed: ${esc(e.message)}</span><p class="muted small">Showing the first successful answer instead.</p>` + md(good[0].text);
         conv.messages.push({ role: "assistant", name: "Super Brain", model: agg.model, content: "Judge failed: " + e.message, error: true, ts: Date.now() });
@@ -1444,14 +1530,14 @@ ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so f
     const v = $("#view-settings");
     v.innerHTML = `<h1>\u2699\uFE0F Settings</h1><p class="sub">API keys are stored only in this browser (localStorage) and are sent only to the provider they belong to. Nothing is hard-coded and there is no server.</p>
   <div class="card"><h2 style="margin-top:0">API keys</h2><p class="muted small">Only OpenRouter is needed: one free key reaches free models plus paid GPT, Claude, Gemini, Grok, DeepSeek and Qwen. Direct keys are optional.</p>
-  ${KEY_PROVIDERS.map((p) => `<div class="keyrow"><div><span class="status-dot ${keys[p] ? "ok" : ""}"></span> ${esc(PROVIDERS[p].label)}</div><input type="password" id="key-${p}" value="${esc(keys[p] || "")}" placeholder="${p === "openrouter" ? "sk-or-v1-\u2026" : "optional"}" autocomplete="off">
-    <div class="row" style="flex-wrap:nowrap"><button class="btn small" data-show="${p}">\u{1F441}</button><button class="btn small" data-test="${p}">Test</button><a class="btn small" href="${PROVIDERS[p].keyUrl}" target="_blank" rel="noopener">Get key</a></div></div>`).join("")}
-  <div class="keyrow"><div><span class="status-dot ${keys.elevenlabs ? "ok" : ""}"></span> ElevenLabs (voices)</div><input type="password" id="key-elevenlabs" value="${esc(keys.elevenlabs || "")}" placeholder="optional, premium voices" autocomplete="off"><div class="row" style="flex-wrap:nowrap"><button class="btn small" data-show="elevenlabs">\u{1F441}</button><a class="btn small" href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener">Get key</a></div></div>
+  ${KEY_PROVIDERS.map((p) => `<div class="keyrow"><div><span class="status-dot ${keys[p] ? "ok" : ""}"></span> ${esc(PROVIDERS[p].label)}</div><input type="text" class="secret" id="key-${p}" value="${esc(keys[p] || "")}" placeholder="${p === "openrouter" ? "sk-or-v1-\u2026" : "optional"}" ${KEY_INPUT_ATTRS}>
+    <div class="row" style="flex-wrap:nowrap">${p === "openrouter" ? '<button class="btn small primary" data-save1="openrouter" type="button">Save</button>' : ""}<button class="btn small" data-show="${p}" type="button">\u{1F441}</button><button class="btn small" data-test="${p}" type="button">Test</button><a class="btn small" href="${PROVIDERS[p].keyUrl}" target="_blank" rel="noopener">Get key</a></div></div>${p === "openrouter" ? `<div id="or-status" class="keys-msg ${keys.openrouter ? storagePersists() ? "ok" : "warn" : ""}">${keys.openrouter ? storagePersists() ? "\u2705 OpenRouter key saved in this browser" : "\u26A0\uFE0F Key works now, but this browser won't keep it after you close the page" : "Paste your key above. It saves automatically."}</div>` : ""}`).join("")}
+  <div class="keyrow"><div><span class="status-dot ${keys.elevenlabs ? "ok" : ""}"></span> ElevenLabs (voices)</div><input type="text" class="secret" id="key-elevenlabs" value="${esc(keys.elevenlabs || "")}" placeholder="optional, premium voices" ${KEY_INPUT_ATTRS}><div class="row" style="flex-wrap:nowrap"><button class="btn small" data-show="elevenlabs" type="button">\u{1F441}</button><a class="btn small" href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener">Get key</a></div></div>
   <details><summary>Advanced: custom OpenAI-compatible server and base URLs</summary>
-    <div class="row"><div class="grow"><label>Custom provider name</label><input type="text" id="custom-name" value="${esc(s.customName)}"></div><div class="grow"><label>Custom API key</label><input type="password" id="key-custom" value="${esc(keys.custom || "")}"></div></div>
+    <div class="row"><div class="grow"><label>Custom provider name</label><input type="text" id="custom-name" value="${esc(s.customName)}"></div><div class="grow"><label>Custom API key</label><input type="text" class="secret" id="key-custom" value="${esc(keys.custom || "")}" ${KEY_INPUT_ATTRS}></div></div>
     ${Object.keys(PROVIDERS).map((p) => `<label>${esc(PROVIDERS[p].label)} base URL</label><input type="text" id="base-${p}" value="${esc(s.baseUrls[p] || "")}" placeholder="${esc(PROVIDERS[p].base || "https://your-server/v1")}">`).join("")}
   </details>
-  <div class="row" style="margin-top:14px;justify-content:flex-end"><span class="muted small" id="keys-msg"></span><button class="btn primary" id="save-keys">Save keys</button></div></div>
+  <div class="row savebar" style="margin-top:14px;justify-content:flex-end"><span class="keys-msg" id="keys-msg"></span><button class="btn primary" id="save-keys" type="button">Save keys</button></div></div>
 
   <div class="card"><h2 style="margin-top:0">Free models</h2><p class="muted small">OpenRouter's free model list changes often. Free models allow about 20 requests/minute and 50/day (1,000/day once you've bought $10 of credits). Last refreshed: <span id="free-at">${cache.at ? fmtTime(cache.at) : "never"}</span>.</p>
   <div class="row"><button class="btn" id="refresh-free">Refresh free models</button><span class="muted small" id="free-count">${((_a = cache.free) == null ? void 0 : _a.length) ? cache.free.length + " free models: " + esc(cache.free.slice(0, 8).join(", ")) + (cache.free.length > 8 ? "\u2026" : "") : ""}</span></div></div>
@@ -1479,39 +1565,78 @@ ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so f
     wirePickers(v);
     $$("[data-show]", v).forEach((b) => b.onclick = () => {
       const i = $("#key-" + b.dataset.show);
-      i.type = i.type === "password" ? "text" : "password";
+      i.classList.toggle("secret");
+    });
+    const ALL_KEY_FIELDS = [...KEY_PROVIDERS, "elevenlabs", "custom"];
+    for (const p of ALL_KEY_FIELDS) {
+      const inp = $("#key-" + p);
+      if (!inp) continue;
+      let t;
+      const auto = (quiet) => {
+        clearTimeout(t);
+        const val = cleanKey(inp.value, p);
+        if (p === "openrouter" && val && !looksLikeOrKey(val)) return;
+        saveOneKey(p, val, { quiet });
+      };
+      inp.addEventListener("input", () => {
+        clearTimeout(t);
+        t = setTimeout(() => auto(true), 700);
+      });
+      inp.addEventListener("paste", () => setTimeout(() => auto(false), 0));
+      inp.addEventListener("change", () => auto(false));
+      inp.addEventListener("blur", () => auto(true));
+    }
+    $$("[data-save1]", v).forEach((b) => b.onclick = () => {
+      const p = b.dataset.save1;
+      const val = cleanKey($("#key-" + p).value, p);
+      if (p === "openrouter" && val && !looksLikeOrKey(val)) return toast("That doesn't look like an OpenRouter key. It should start with sk-or-v1-", 5e3);
+      saveOneKey(p, val);
     });
     $("#save-keys").onclick = () => {
-      const k = { ...getKeys() };
-      for (const p of [...KEY_PROVIDERS, "elevenlabs", "custom"]) {
-        const val = $("#key-" + p).value.trim();
-        if (val) k[p] = val;
-        else delete k[p];
+      var _a2;
+      try {
+        const k = { ...getKeys() };
+        for (const p of ALL_KEY_FIELDS) {
+          const el = $("#key-" + p);
+          if (!el) continue;
+          const val = cleanKey(el.value, p);
+          if (val) k[p] = val;
+          else delete k[p];
+        }
+        const persisted = saveKeys(k);
+        const st = getSettings();
+        st.customName = (((_a2 = $("#custom-name")) == null ? void 0 : _a2.value) || "").trim() || "Custom";
+        for (const p of Object.keys(PROVIDERS)) {
+          const el = $("#base-" + p);
+          if (!el) continue;
+          const val = el.value.trim();
+          if (val) st.baseUrls[p] = val;
+          else delete st.baseUrls[p];
+        }
+        saveSettings(st);
+        renderers.settings();
+        keySavedUi("openrouter", !k.openrouter ? "cleared" : persisted ? "saved" : "memory", false);
+        if (!k.openrouter && persisted) toast("Keys saved in this browser");
+      } catch (e) {
+        toast("Could not save: " + e.message, 6e3);
+        const m = $("#keys-msg");
+        if (m) m.textContent = "\u26A0\uFE0F Could not save: " + e.message;
       }
-      saveKeys(k);
-      const st = getSettings();
-      st.customName = $("#custom-name").value.trim() || "Custom";
-      for (const p of Object.keys(PROVIDERS)) {
-        const val = $("#base-" + p).value.trim();
-        if (val) st.baseUrls[p] = val;
-        else delete st.baseUrls[p];
-      }
-      saveSettings(st);
-      toast("Keys saved in this browser");
-      renderBanner();
-      renderers.settings();
     };
     $$("[data-test]", v).forEach((b) => b.onclick = async () => {
       var _a2;
       const p = b.dataset.test;
       b.textContent = "\u2026";
       try {
+        const raw = $("#key-" + p).value;
+        if (!cleanKey(raw, p)) throw new Error("Paste the key first");
+        saveOneKey(p, raw, { quiet: true });
         if (p === "openrouter") {
-          const key = $("#key-openrouter").value.trim();
+          const key = getKeys().openrouter;
           const r = await fetch(`${baseUrl("openrouter")}/key`, { headers: { authorization: `Bearer ${key}` } });
-          if (!r.ok) throw new Error("HTTP " + r.status);
+          if (!r.ok) throw new Error(r.status === 401 ? "key was rejected (HTTP 401). Copy it again from your key doc." : "HTTP " + r.status);
           const j = await r.json();
-          toast(`\u2705 OpenRouter key works${((_a2 = j.data) == null ? void 0 : _a2.is_free_tier) ? " (free tier)" : ""}`);
+          toast(`\u2705 OpenRouter key works${((_a2 = j.data) == null ? void 0 : _a2.is_free_tier) ? " (free tier)" : ""} and is saved`, 4e3);
         } else {
           if (!hasKey(p)) throw new Error("Save the key first");
           const ids = await listModels(p);
@@ -1520,7 +1645,7 @@ ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so f
         b.textContent = "\u2705";
       } catch (e) {
         b.textContent = "\u26A0\uFE0F";
-        toast(`${PROVIDERS[p].label}: ${e.message}`, 5e3);
+        toast(`${PROVIDERS[p].label}: ${e.message}`, 6e3);
       }
     });
     $("#refresh-free").onclick = async () => {
@@ -1683,4 +1808,5 @@ ${t === 0 ? "You speak first. Kick things off." : "Here is the conversation so f
   else if (getSettings().voiceInput.enabled) state.wake.start();
   else micUi("off");
   handleLaunchParams();
+  if (window.__keyFromLink) setTimeout(() => toast(storagePersists() ? "\u2705 OpenRouter key saved from your setup link. You're ready to chat!" : "\u2705 OpenRouter key loaded from your setup link (this browser won't keep it after you close the page)", 6e3), 300);
 })();

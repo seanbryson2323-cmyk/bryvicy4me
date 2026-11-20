@@ -121,3 +121,13 @@ a.btn{text-decoration:none;color:var(--text);display:inline-block}
 .mic-pill{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#1d2a1a;border:1px solid #4f8f43;color:#dff5d2;padding:8px 16px;border-radius:999px;z-index:70;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);max-width:90vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:760px){#nav button.mic{margin-top:0;border:0}#nav button.mic em{font-size:0}#nav button.mic em::after{content:"Mic";font-size:10.5px}}
 .ts{color:var(--muted);font-size:11.5px;white-space:nowrap}.msg.user .who{text-align:right}.hit-meta{color:#aab3c5}
+/* key saving (mobile) */
+.secret{-webkit-text-security:disc;text-security:disc}
+.quickkey{display:flex;gap:6px;margin-top:6px;align-items:center}.quickkey input{flex:1;min-width:0}
+.keys-msg{font-size:13px;color:var(--muted);margin:2px 0 8px}.keys-msg.ok{color:#8fd66b}.keys-msg.warn{color:#ffd98a}
+.savebar .keys-msg{margin:0;flex:1;text-align:right}
+@media (max-width:760px){
+  input[type=text],input[type=password],input[type=number],input[type=search],select,textarea{font-size:16px} /* stops iPhone zooming in on tap */
+  .savebar{position:sticky;bottom:-16px;background:var(--panel);padding:10px 0 12px;margin-bottom:-16px;z-index:3;border-top:1px solid var(--line)}
+}
+@media (max-width:760px){.toast{bottom:150px}}
